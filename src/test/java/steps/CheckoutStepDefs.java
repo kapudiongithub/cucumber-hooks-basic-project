@@ -14,11 +14,11 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-public class AddToCartSteps {
+public class CheckoutStepDefs {
 
-    /*
     WebDriver driver = Hooks.getDriver();
 
     @Given("I open the Sauce Demo login page")
@@ -95,6 +95,46 @@ public class AddToCartSteps {
         Assert.assertEquals("Mismatch in the number of items in the cart", expectedProducts.size(), actualProducts.size());
     }
 
-     */
-}
+    @When("I proceed to checkout with the following details:")
+    public void iProceedToCheckoutWithTheFollowingDetails(Map<String, String> userDetails) {
+        // Click the "Checkout" button on the cart page
+        driver.findElement(By.id("checkout")).click();
 
+        // Fill out the checkout information form
+        driver.findElement(By.id("first-name")).sendKeys(userDetails.get("First Name"));
+        driver.findElement(By.id("last-name")).sendKeys(userDetails.get("Last Name"));
+        driver.findElement(By.id("postal-code")).sendKeys(userDetails.get("Postal Code"));
+
+        // Click the "Continue" button to proceed to the summary page
+        driver.findElement(By.id("continue")).click();
+    }
+
+    @Then("the total price should match the sum of the product prices")
+    public void theTotalPriceShouldMatchTheSumOfTheProductPrices() {
+        // Get the prices of individual items on the summary page
+        List<WebElement> itemPrices = driver.findElements(By.className("inventory_item_price"));
+        double totalItemPrice = itemPrices.stream()
+                .mapToDouble(price -> Double.parseDouble(price.getText().replace("$", "")))
+                .sum();
+
+        // Get the tax value from the summary page
+        WebElement taxElement = driver.findElement(By.className("summary_tax_label"));
+        double tax = Double.parseDouble(taxElement.getText().replace("Tax: $", ""));
+
+        // Calculate the expected total price
+        double expectedTotalPrice = totalItemPrice + tax;
+
+        // Get the total price displayed on the summary page
+        WebElement totalPriceElement = driver.findElement(By.className("summary_total_label"));
+        double displayedTotalPrice = Double.parseDouble(totalPriceElement.getText().replace("Total: $", ""));
+
+        System.out.println("Tax: $" + tax);
+        System.out.println("Calculated Total: $" + expectedTotalPrice);
+        System.out.println("Displayed Total: $" + displayedTotalPrice);
+
+        // Verify that the displayed total matches the expected total
+        Assert.assertEquals("Total price does not match the sum of item prices and tax", expectedTotalPrice, displayedTotalPrice, 0.01);
+    }
+
+
+}

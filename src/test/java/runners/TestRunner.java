@@ -8,7 +8,7 @@ import org.junit.runner.RunWith;
 @CucumberOptions(
         features = "src/test/resources/features",
         glue = {"steps", "hooks"},
-        tags = "@cartItems",
+        tags = "@checkout",
         plugin = {"pretty", "html:target/cucumber-report.html"},
         monochrome = true
 )
