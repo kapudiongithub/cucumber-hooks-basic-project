@@ -1,6 +1,7 @@
 package steps;
 
 import hooks.Hooks;
+import io.cucumber.datatable.DataTable;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
@@ -17,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class CheckoutStepDefs {
+public class E2ESteps {
 
     WebDriver driver = Hooks.getDriver();
 
@@ -26,10 +27,20 @@ public class CheckoutStepDefs {
         driver.get("https://www.saucedemo.com/");
     }
 
-    @When("I enter valid credentials")
-    public void iEnterValidCredentials() {
-        driver.findElement(By.id("user-name")).sendKeys("standard_user");
-        driver.findElement(By.id("password")).sendKeys("secret_sauce");
+    @When("I enter credentials {string} and {string}")
+    public void iEnterCredentials(String username, String password) {
+        // Locate username and password fields and enter the values
+        WebElement usernameField = driver.findElement(By.id("user-name"));
+        WebElement passwordField = driver.findElement(By.id("password"));
+
+        usernameField.clear();
+        usernameField.sendKeys(username);
+
+        passwordField.clear();
+        passwordField.sendKeys(password);
+
+        System.out.println("Entered Username: " + username);
+        System.out.println("Entered Password: " + password);
     }
 
     @And("I click on the login button")
@@ -54,15 +65,24 @@ public class CheckoutStepDefs {
 //    }
 
     @When("I add the following products to the cart:")
-    public void iAddTheFollowingProductsToTheCart(List<String> productNames) {
-//        WebDriverWait wait = new WebDriverWait(driver, 10); // 10-second wait
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+    public void iAddTheFollowingProductsToTheCart(DataTable dataTable) {
+        // Extract the product names from the DataTable
+        List<String> productNames = dataTable.asMaps(String.class, String.class)
+                .stream()
+                .map(row -> row.get("Product Name"))
+                .collect(Collectors.toList());
 
         for (String productName : productNames) {
-            // Locate the product container by its name and add it to the cart
+            System.out.println("Adding product: " + productName);
+
+            // Updated and dynamic XPath
             String productXpath = "//div[text()='" + productName + "']/ancestor::div[@class='inventory_item']//button[contains(text(), 'Add to cart')]";
-            wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(productXpath))); // Ensure the element is present
-            driver.findElement(By.xpath(productXpath)).click();
+
+            // Wait for the element to be present and click
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.xpath(productXpath)));
+            WebElement addToCartButton = driver.findElement(By.xpath(productXpath));
+            addToCartButton.click();
         }
     }
 
@@ -73,30 +93,34 @@ public class CheckoutStepDefs {
     }
 
     @Then("the cart should contain the following products:")
-    public void theCartShouldContainTheFollowingProducts(List<String> expectedProducts) {
+    public void theCartShouldContainTheFollowingProducts(DataTable dataTable) {
+        // Extract the expected product names from the DataTable
+        List<String> expectedProducts = dataTable.asMaps(String.class, String.class)
+                .stream()
+                .map(row -> row.get("Product Name"))
+                .collect(Collectors.toList());
+
         // Navigate to the cart page
         driver.findElement(By.className("shopping_cart_link")).click();
 
         // Extract the names of products in the cart
         List<WebElement> cartItems = driver.findElements(By.className("inventory_item_name"));
-
-        // Create a list of product names from the cart
         List<String> actualProducts = cartItems.stream()
                 .map(WebElement::getText)
                 .collect(Collectors.toList());
 
         // Verify that the cart contains all the expected products
-        for (String product : expectedProducts) {
-            System.out.println("Product: " + product);
-            Assert.assertTrue("Product not found in the cart: " + product, actualProducts.contains(product));
-        }
+        Assert.assertTrue("The cart does not contain all expected products", actualProducts.containsAll(expectedProducts));
 
         // Optionally, ensure the count matches
         Assert.assertEquals("Mismatch in the number of items in the cart", expectedProducts.size(), actualProducts.size());
     }
 
     @When("I proceed to checkout with the following details:")
-    public void iProceedToCheckoutWithTheFollowingDetails(Map<String, String> userDetails) {
+    public void iProceedToCheckoutWithTheFollowingDetails(DataTable dataTable) {
+        // Convert DataTable to Map for easier access
+        Map<String, String> userDetails = dataTable.asMap(String.class, String.class);
+
         // Click the "Checkout" button on the cart page
         driver.findElement(By.id("checkout")).click();
 
@@ -128,13 +152,12 @@ public class CheckoutStepDefs {
         WebElement totalPriceElement = driver.findElement(By.className("summary_total_label"));
         double displayedTotalPrice = Double.parseDouble(totalPriceElement.getText().replace("Total: $", ""));
 
-        System.out.println("Tax: $" + tax);
-        System.out.println("Calculated Total: $" + expectedTotalPrice);
-        System.out.println("Displayed Total: $" + displayedTotalPrice);
+        System.out.println("Subtotal " + totalItemPrice);
+        System.out.println("Tax: " + tax);
+        System.out.println("Calculated Total: " + expectedTotalPrice);
+        System.out.println("Displayed Total: " + displayedTotalPrice);
 
         // Verify that the displayed total matches the expected total
         Assert.assertEquals("Total price does not match the sum of item prices and tax", expectedTotalPrice, displayedTotalPrice, 0.01);
     }
-
-
 }

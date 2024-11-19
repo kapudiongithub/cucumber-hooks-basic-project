@@ -1,12 +1,6 @@
 package steps;
 
-import hooks.Hooks;
-import io.cucumber.java.en.*;
-import org.junit.Assert;
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-
-public class LoginStepDefs {
+public class LoginSteps {
 
 /*
     WebDriver driver = Hooks.getDriver();
